@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/data/notifiers.dart';
 import 'package:flutter_app/views/pages/home_page.dart';
 import 'package:flutter_app/views/pages/videos.dart';
 import 'package:flutter_app/views/pages/profile.dart';
-import '../widgets/navbar_widget.dart';
+import 'widgets/navbar_widget.dart';
 List<Widget> pages =[
   HomePage(),
-  ProfilePage(),
   VideoPage(),
+  ProfilePage(),
 ];
 class WidgetTree extends StatelessWidget {
   const WidgetTree ({super.key});
@@ -19,7 +20,10 @@ class WidgetTree extends StatelessWidget {
         centerTitle: true,
         backgroundColor: Colors.teal,
       ),
-      body: pages.elementAt(2) ,
+      body: ValueListenableBuilder(valueListenable: selectedPageNotifier,
+          builder: (context, selectedPage, child) {
+            return  pages.elementAt(selectedPage);
+          },) ,
 
       drawer: Drawer(
         child: SafeArea(

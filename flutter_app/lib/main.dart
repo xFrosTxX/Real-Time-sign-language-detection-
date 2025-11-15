@@ -20,7 +20,7 @@ class MyApp extends StatelessWidget {
         ),
       ),
 
-      home: WidgetTree(),   // <-- FIXED
+      home: const  WidgetTree(),
     );
   }
 }
