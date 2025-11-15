@@ -17,6 +17,23 @@ class WidgetTree extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('Sign Language Recognition'),
+        actions: [
+          IconButton(
+          onPressed: () {
+            selectedDarkModeNotifier.value= !selectedDarkModeNotifier.value;
+          },
+
+        icon: ValueListenableBuilder(
+          valueListenable: selectedDarkModeNotifier,
+          builder: (context,selectedDarkModeNotifier, child) {
+            return Icon(
+              selectedDarkModeNotifier ? Icons.dark_mode :Icons.light_mode,
+            );
+          },
+        ),
+          ),
+
+        ],
         centerTitle: true,
         backgroundColor: Colors.teal,
       ),
