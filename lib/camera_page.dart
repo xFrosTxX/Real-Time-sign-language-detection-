@@ -60,8 +60,9 @@ class _CameraPageState extends State<CameraPage> {
     interpreter.run([input], output);
 
     // Find max index
-    int index =
-        output[0].indexWhere((e) => e == output[0].reduce((a, b) => a > b ? a : b));
+    int index = output[0].indexWhere(
+      (e) => e == output[0].reduce((a, b) => a > b ? a : b),
+    );
 
     setState(() {
       predictedLabel = indexToLabel(index);
@@ -88,9 +89,35 @@ class _CameraPageState extends State<CameraPage> {
   // Your class labels:
   String indexToLabel(int i) {
     const labels = [
-      'A','B','C','D','E','F','G','H','I','J',
-      'K','L','M','N','O','P','Q','R','S','T',
-      'U','V','W','X','Y','Z','del','nothing','space'
+      'A',
+      'B',
+      'C',
+      'D',
+      'E',
+      'F',
+      'G',
+      'H',
+      'I',
+      'J',
+      'K',
+      'L',
+      'M',
+      'N',
+      'O',
+      'P',
+      'Q',
+      'R',
+      'S',
+      'T',
+      'U',
+      'V',
+      'W',
+      'X',
+      'Y',
+      'Z',
+      'del',
+      'nothing',
+      'space',
     ];
     return labels[i];
   }
@@ -104,8 +131,7 @@ class _CameraPageState extends State<CameraPage> {
 
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
-        final int uvIndex =
-            (y ~/ 2) * (width ~/ 2) + (x ~/ 2); // chroma index
+        final int uvIndex = (y ~/ 2) * (width ~/ 2) + (x ~/ 2); // chroma index
 
         final yp = image.planes[0].bytes[y * width + x];
         final up = image.planes[1].bytes[uvIndex];
@@ -143,7 +169,7 @@ class _CameraPageState extends State<CameraPage> {
                       color: Colors.yellow,
                     ),
                   ),
-                )
+                ),
               ],
             )
           : const Center(child: CircularProgressIndicator()),
