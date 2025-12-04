@@ -4,6 +4,6 @@ class VideoPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(child: Text('video page'),);
+    return const Center(child: Text('video page'),);
   }
 }
