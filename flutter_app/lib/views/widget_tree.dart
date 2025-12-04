@@ -55,7 +55,7 @@ class WidgetTree extends StatelessWidget {
                   child: Text(
                       'Gesturewise',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Colors.teal,
                       fontSize: 24,
 
 
@@ -64,11 +64,19 @@ class WidgetTree extends StatelessWidget {
               ListTile(
                 title: Text('Logout'),
                 onTap: (){
-    Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      duration:Duration(seconds: 5),
+                      content: Text('Logged Out'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                  Navigator.pop(context);
     Navigator.pushAndRemoveUntil(
     context,
     MaterialPageRoute(builder: (context) => const WelcomePage()),
     (route) => false,
+
     );
     },
 
