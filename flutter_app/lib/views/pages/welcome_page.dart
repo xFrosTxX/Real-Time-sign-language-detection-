@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/views/pages/home_page.dart';
+import 'package:flutter_app/views/pages/login_page.dart';
 import 'package:flutter_app/views/widget_tree.dart';
 import 'package:flutter_app/views/widgets/hero_widget.dart';
 import 'package:lottie/lottie.dart';
@@ -45,7 +46,7 @@ class WelcomePage extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                  SnackBar(
                    duration:Duration(seconds: 5),
-                     content: Text('Login Successful'),
+                     content: Text('SignUp New account'),
                    behavior: SnackBarBehavior.floating,
                  ),
               );
@@ -53,7 +54,7 @@ class WelcomePage extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) {
-                    return WidgetTree();
+                    return LoginPage();
                   },
                 ),
               );
