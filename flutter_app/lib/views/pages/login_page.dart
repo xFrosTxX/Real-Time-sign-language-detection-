@@ -4,7 +4,12 @@ import 'package:flutter_app/views/widgets/hero_widget.dart';
 
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  const LoginPage({
+    super.key,
+    required this.title,
+  });
+
+  final String title;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
