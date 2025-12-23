@@ -36,26 +36,47 @@ class OnboardingPage extends StatelessWidget {
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.teal,
-                    minimumSize: const Size(double.infinity, 45),
+                    minimumSize: const Size(double.infinity, 40),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   onPressed: () {
+                    // Navigate to LoginPage in REGISTER mode
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) =>
-                        const LoginPage(title: 'Register'),
+                        const LoginPage(isLogin: false), // false = register
                       ),
                     );
                   },
                   child: const Text(
-                    'Next',
+                    'Register Now',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+
+                TextButton(
+                  onPressed: () {
+                    // Optional: if user wants to go directly to LOGIN
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                        const LoginPage(isLogin: true), // true = login
+                      ),
+                    );
+                  },
+                  child: const Text(
+                    'Already have an account? Login',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),

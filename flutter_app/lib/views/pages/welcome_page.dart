@@ -38,57 +38,34 @@ class WelcomePage extends StatelessWidget {
 
 
           FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.tealAccent,
-              minimumSize: Size(double.infinity, 40.0),
-            ),
-
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                 SnackBar(
-                   duration:Duration(seconds: 5),
-                     content: Text('SignUp New account'),
-                   behavior: SnackBarBehavior.floating,
-                 ),
-              );
+              // Navigate to onboarding page first
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) {
-                    return OnboardingPage();
-                  },
+                  builder: (context) => const OnboardingPage(),
                 ),
               );
             },
-                child: Text('Get Started'),
-
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.teal,
+              minimumSize: const Size(double.infinity, 45),
+              // width: full, height: 50
+            ),
+            child: const Text('Get Started'),
           ),
           TextButton(
-            style: FilledButton.styleFrom(
-              minimumSize: Size(double.infinity, 40.0),
-
-            ),
-
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  duration:Duration(seconds: 5),
-                  content: Text('Login Successful'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-              Navigator.pushReplacement(
+              Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) {
-                    return WidgetTree();
-                  },
+                  builder: (context) => LoginPage(isLogin: true), // Login mode
                 ),
               );
             },
             child: Text('Login'),
-
           ),
+
 
         ],
         ),
