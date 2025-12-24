@@ -1,0 +1,12 @@
+{
+    "dart.flutterSdkPath": "D:/flutter",
+    "dart.sdkPath": "D:/flutter/bin/cache/dart-sdk",
+    
+    "cmake.sourceDirectory": "D:/signrecog_app/linux",
+
+    "workbench.colorTheme": "GitHub Light",
+    "git.autofetch": true,
+    "git.confirmSync": false,
+    "workbench.iconTheme": "bearded-icons",
+    "workbench.productIconTheme": "emoji-product-icons"
+}
