@@ -47,7 +47,7 @@ class OnboardingPage extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (context) =>
-                        const LoginPage(isLogin: false), // false = register
+                            const LoginPage(isLogin: false), // false = register
                       ),
                     );
                   },
@@ -60,7 +60,6 @@ class OnboardingPage extends StatelessWidget {
                     ),
                   ),
                 ),
-
                 TextButton(
                   onPressed: () {
                     // Optional: if user wants to go directly to LOGIN
@@ -68,7 +67,7 @@ class OnboardingPage extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (context) =>
-                        const LoginPage(isLogin: true), // true = login
+                            const LoginPage(isLogin: true), // true = login
                       ),
                     );
                   },
