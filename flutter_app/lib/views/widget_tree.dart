@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/data/notifiers.dart';
 import 'package:flutter_app/views/pages/home_page.dart';
@@ -16,6 +17,38 @@ List<Widget> pages = [
 
 class WidgetTree extends StatelessWidget {
   const WidgetTree({super.key});
+
+  Future<void> signOut(BuildContext context) async {
+    try {
+      await FirebaseAuth.instance.signOut();
+
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          duration: Duration(seconds: 5),
+          content: Text('Logged Out'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const WelcomePage()),
+        (route) => false,
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error logging out: $e'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color.fromARGB(255, 1, 72, 107),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,31 +84,20 @@ class WidgetTree extends StatelessWidget {
           child: Column(
             children: [
               DrawerHeader(
-                  decoration: BoxDecoration(),
-                  child: Text(
-                    'Gesturewise',
-                    style: TextStyle(
-                      color: Colors.teal,
-                      fontSize: 24,
-                    ),
-                  )),
+                decoration: BoxDecoration(),
+                child: Text(
+                  'Gesturewise',
+                  style: TextStyle(
+                    color: Colors.teal,
+                    fontSize: 24,
+                  ),
+                ),
+              ),
               ListTile(
                 title: Text('Logout'),
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      duration: Duration(seconds: 5),
-                      content: Text('Logged Out'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
                   Navigator.pop(context);
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const WelcomePage()),
-                    (route) => false,
-                  );
+                  signOut(context);
                 },
               ),
             ],

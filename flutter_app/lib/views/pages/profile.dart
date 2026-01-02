@@ -1,6 +1,5 @@
 import 'dart:convert';
-import 'dart:io'
-    show File; // safe even on web as long as we don't use it when kIsWeb
+import 'dart:io' show File;
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -240,7 +239,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ],
             ),
             Text(
-              "Persoalize your profile by adding a photo and updating your display name.",
+              "Personalize your profile by adding a photo and updating your display name.",
               style: TextStyle(color: Colors.grey.shade600),
             ),
           ],

@@ -1,8 +1,11 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/data/notifiers.dart';
-import 'package:flutter_app/views/pages/welcome_page.dart';
+import 'package:flutter_app/views/auth_gate.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 
@@ -22,7 +25,7 @@ class MyApp extends StatelessWidget {
               brightness: selectedDarkMode ? Brightness.dark : Brightness.light,
             ),
           ),
-          home: const WelcomePage(),
+          home: const AuthGate(), // ← Changed this
         );
       },
     );

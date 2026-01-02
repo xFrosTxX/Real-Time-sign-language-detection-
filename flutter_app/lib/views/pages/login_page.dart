@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/views/widget_tree.dart';
 import 'package:flutter_app/views/widgets/hero_widget.dart';
@@ -15,13 +16,13 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  TextEditingController controllerEmail = TextEditingController();
-  TextEditingController controllerPw = TextEditingController();
+  final TextEditingController controllerEmail = TextEditingController();
+  final TextEditingController controllerPw = TextEditingController();
   bool _obscurePassword = true;
+  bool _isLoading = false;
 
-  // Example hardcoded credentials (for testing)
-  String ConfirmedEmail = '123';
-  String ConfirmedPw = '456';
+  // Error message
+  String? errorMessage;
 
   @override
   void dispose() {
@@ -30,31 +31,166 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
+  // LOGIN function with Firebase
+  Future<void> login() async {
+    setState(() {
+      _isLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: controllerEmail.text.trim(),
+        password: controllerPw.text.trim(),
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          duration: Duration(seconds: 2),
+          content: Text('Login successful!'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const WidgetTree()),
+      );
+    } on FirebaseAuthException catch (e) {
+      setState(() {
+        errorMessage = _getErrorMessage(e.code);
+      });
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage!),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  // REGISTER function with Firebase
+  Future<void> register() async {
+    setState(() {
+      _isLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: controllerEmail.text.trim(),
+        password: controllerPw.text.trim(),
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 2),
+          content: Text('Registration successful for ${controllerEmail.text}!'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const WidgetTree()),
+      );
+    } on FirebaseAuthException catch (e) {
+      setState(() {
+        errorMessage = _getErrorMessage(e.code);
+      });
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage!),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  // Helper function to get user-friendly error messages
+  String _getErrorMessage(String code) {
+    switch (code) {
+      case 'user-not-found':
+        return 'No user found with this email.';
+      case 'wrong-password':
+        return 'Wrong password provided.';
+      case 'email-already-in-use':
+        return 'An account already exists with this email.';
+      case 'weak-password':
+        return 'Password is too weak. Use at least 6 characters.';
+      case 'invalid-email':
+        return 'Invalid email address.';
+      case 'user-disabled':
+        return 'This account has been disabled.';
+      case 'too-many-requests':
+        return 'Too many attempts. Please try again later.';
+      case 'operation-not-allowed':
+        return 'Email/password accounts are not enabled.';
+      case 'invalid-credential':
+        return 'Invalid email or password.';
+      default:
+        return 'An error occurred. Please try again.';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
             HeroWidget(title: widget.isLogin ? 'Login' : 'Register'),
-            SizedBox(height: 20.0),
+            const SizedBox(height: 20.0),
+
+            // Email field
             TextField(
               controller: controllerEmail,
+              keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(
                 hintText: 'Email',
+                prefixIcon: const Icon(Icons.email),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(15.0),
                 ),
               ),
             ),
-            SizedBox(height: 10.0),
+            const SizedBox(height: 10.0),
+
+            // Password field
             TextField(
               controller: controllerPw,
               obscureText: _obscurePassword,
               decoration: InputDecoration(
                 hintText: 'Password',
+                prefixIcon: const Icon(Icons.lock),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(15.0),
                 ),
@@ -70,70 +206,43 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
             ),
-            SizedBox(height: 20.0),
+            const SizedBox(height: 20.0),
+
+            // Login/Register button
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blueGrey,
-                minimumSize: Size(double.infinity, 40.0),
+                minimumSize: const Size(double.infinity, 50.0),
               ),
-              onPressed: () {
-                // Call the correct function based on mode
-                if (widget.isLogin) {
-                  login();
-                } else {
-                  register();
-                }
-              },
-              child: Text(
-                widget.isLogin ? 'Login' : 'Register',
-                style: TextStyle(
-                  color: Colors.black,
-                ),
-              ),
+              onPressed: _isLoading
+                  ? null
+                  : () {
+                      if (widget.isLogin) {
+                        login();
+                      } else {
+                        register();
+                      }
+                    },
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Text(
+                      widget.isLogin ? 'Login' : 'Register',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
+                    ),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  // LOGIN function
-  void login() {
-    if (ConfirmedEmail == controllerEmail.text &&
-        ConfirmedPw == controllerPw.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          duration: Duration(seconds: 5),
-          content: Text('Login successful!'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const WidgetTree()),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Login failed!'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-  }
-
-  // REGISTER function
-  void register() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        duration: Duration(seconds: 5),
-        content: Text('Register successful for ${controllerEmail.text}!'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const WidgetTree()),
     );
   }
 }

@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "662625991254",
+    "project_id": "signlanguage-bac86",
+    "storage_bucket": "signlanguage-bac86.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:662625991254:android:89628b190b6dfae3f199f7",
+        "android_client_info": {
+          "package_name": "com.example.flutter_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "662625991254-88m12s38hvk4gha88m40kagcl0r9hmg9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCLBWS274id69jtKvaAumPdIXO19I_aOio"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "662625991254-88m12s38hvk4gha88m40kagcl0r9hmg9.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
