@@ -1,10 +1,13 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/data/notifiers.dart';
 import 'package:flutter_app/views/pages/welcome_page.dart';
 
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
 
+  await Firebase.initializeApp();
 
-void main() {
   runApp(const MyApp());
 }
 
@@ -13,22 +16,20 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder(valueListenable: selectedDarkModeNotifier,
+    return ValueListenableBuilder(
+      valueListenable: selectedDarkModeNotifier,
       builder: (context, selectedDarkMode, child) {
-     return MaterialApp(
-       debugShowCheckedModeBanner: false,
-       theme: ThemeData(
-         colorScheme: ColorScheme.fromSeed(
-           seedColor: Colors.teal,
-           brightness: selectedDarkMode ? Brightness.dark: Brightness.light,
-         ),
-       ),
-
-       home: const WelcomePage(),
-     );
-    },
-    ) ;
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.teal,
+              brightness: selectedDarkMode ? Brightness.dark : Brightness.light,
+            ),
+          ),
+          home: const WelcomePage(),
+        );
+      },
+    );
   }
 }
-
-
