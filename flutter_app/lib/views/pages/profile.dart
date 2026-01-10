@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io' show File;
 import 'dart:typed_data';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -15,19 +17,16 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  static const _kDisplayName = 'display_name';
-  static const _kProfileImagePath = 'profile_image_path'; // mobile
-  static const _kProfileImageBase64 = 'profile_image_base64'; // web
-
   final ImagePicker _picker = ImagePicker();
 
   String _displayName = "Guest User";
 
-  // For mobile/desktop
-  File? _profileImageFile;
+  File? _profileImageFile; // mobile
+  Uint8List? _profileImageBytes; // web
 
-  // For web
-  Uint8List? _profileImageBytes;
+  String _nameKey(String uid) => 'display_name_$uid';
+  String _imgPathKey(String uid) => 'profile_image_path_$uid';
+  String _imgB64Key(String uid) => 'profile_image_base64_$uid';
 
   @override
   void initState() {
@@ -37,26 +36,49 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _loadProfile() async {
     final prefs = await SharedPreferences.getInstance();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
 
-    final savedName = prefs.getString(_kDisplayName);
-    if (savedName != null && savedName.trim().isNotEmpty) {
-      _displayName = savedName.trim();
-    }
+    // ✅ Username from Firestore
+    if (uid != null) {
+      try {
+        final doc =
+            await FirebaseFirestore.instance.collection("users").doc(uid).get();
+        final username = doc.data()?["username"];
 
-    if (kIsWeb) {
-      final b64 = prefs.getString(_kProfileImageBase64);
-      if (b64 != null && b64.isNotEmpty) {
-        try {
-          _profileImageBytes = base64Decode(b64);
-        } catch (_) {
-          _profileImageBytes = null;
+        if (username != null && username.toString().trim().isNotEmpty) {
+          _displayName = username.toString().trim();
+          await prefs.setString(_nameKey(uid), _displayName); // cache
+        } else {
+          final cached = prefs.getString(_nameKey(uid));
+          if (cached != null && cached.trim().isNotEmpty) {
+            _displayName = cached.trim();
+          }
+        }
+      } catch (_) {
+        final cached = prefs.getString(_nameKey(uid));
+        if (cached != null && cached.trim().isNotEmpty) {
+          _displayName = cached.trim();
         }
       }
-    } else {
-      final path = prefs.getString(_kProfileImagePath);
-      if (path != null && path.isNotEmpty) {
-        final f = File(path);
-        if (await f.exists()) _profileImageFile = f;
+    }
+
+    // ✅ Photo locally (FREE)
+    if (uid != null) {
+      if (kIsWeb) {
+        final b64 = prefs.getString(_imgB64Key(uid));
+        if (b64 != null && b64.isNotEmpty) {
+          try {
+            _profileImageBytes = base64Decode(b64);
+          } catch (_) {
+            _profileImageBytes = null;
+          }
+        }
+      } else {
+        final path = prefs.getString(_imgPathKey(uid));
+        if (path != null && path.isNotEmpty) {
+          final f = File(path);
+          if (await f.exists()) _profileImageFile = f;
+        }
       }
     }
 
@@ -64,44 +86,56 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _saveName(String name) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    final newName = name.trim();
+    if (newName.isEmpty) return;
+
+    // Save online
+    await FirebaseFirestore.instance.collection("users").doc(uid).set(
+      {"username": newName},
+      SetOptions(merge: true),
+    );
+
+    // Cache locally
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_kDisplayName, name.trim());
+    await prefs.setString(_nameKey(uid), newName);
   }
 
   Future<void> _pickFromGallery() async {
-    try {
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 85,
-      );
-      if (image == null) return;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
 
-      final prefs = await SharedPreferences.getInstance();
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
+    if (image == null) return;
 
-      if (kIsWeb) {
-        final bytes = await image.readAsBytes();
-        setState(() => _profileImageBytes = bytes);
-        await prefs.setString(_kProfileImageBase64, base64Encode(bytes));
-      } else {
-        setState(() => _profileImageFile = File(image.path));
-        await prefs.setString(_kProfileImagePath, image.path);
-      }
-    } catch (e) {
-      debugPrint("Image pick error: $e");
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Could not pick image: $e")),
-      );
+    final prefs = await SharedPreferences.getInstance();
+
+    if (kIsWeb) {
+      final bytes = await image.readAsBytes();
+      setState(() => _profileImageBytes = bytes);
+      await prefs.setString(_imgB64Key(uid), base64Encode(bytes));
+    } else {
+      setState(() => _profileImageFile = File(image.path));
+      await prefs.setString(_imgPathKey(uid), image.path);
     }
   }
 
   Future<void> _removePhoto() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
     final prefs = await SharedPreferences.getInstance();
+
     if (kIsWeb) {
-      await prefs.remove(_kProfileImageBase64);
+      await prefs.remove(_imgB64Key(uid));
       setState(() => _profileImageBytes = null);
     } else {
-      await prefs.remove(_kProfileImagePath);
+      await prefs.remove(_imgPathKey(uid));
       setState(() => _profileImageFile = null);
     }
   }
@@ -115,7 +149,6 @@ class _ProfilePageState extends State<ProfilePage> {
         title: const Text("Edit Name"),
         content: TextField(
           controller: controller,
-          textInputAction: TextInputAction.done,
           decoration: const InputDecoration(
             hintText: "Enter your name",
             border: OutlineInputBorder(),
@@ -152,25 +185,17 @@ class _ProfilePageState extends State<ProfilePage> {
           children: [
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Choose from Gallery'),
+              title: const Text("Choose from Gallery"),
               onTap: () {
                 Navigator.pop(context);
                 _pickFromGallery();
               },
             ),
-            if (!kIsWeb)
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0),
-                child: Text(
-                  "Tip: On web, camera capture is not reliable in all browsers.\nUse Gallery for best results.",
-                  style: TextStyle(fontSize: 12),
-                ),
-              ),
             if ((kIsWeb && _profileImageBytes != null) ||
                 (!kIsWeb && _profileImageFile != null))
               ListTile(
                 leading: const Icon(Icons.delete_outline),
-                title: const Text('Remove Photo'),
+                title: const Text("Remove Photo"),
                 onTap: () {
                   Navigator.pop(context);
                   _removePhoto();
@@ -182,17 +207,24 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  ImageProvider _avatarProvider() {
-    // Web: show bytes
+  Widget _avatarWidget() {
     if (kIsWeb && _profileImageBytes != null) {
-      return MemoryImage(_profileImageBytes!);
+      return CircleAvatar(
+        radius: 55,
+        backgroundImage: MemoryImage(_profileImageBytes!),
+      );
     }
-    // Mobile/desktop: show file
     if (!kIsWeb && _profileImageFile != null) {
-      return FileImage(_profileImageFile!);
+      return CircleAvatar(
+        radius: 55,
+        backgroundImage: FileImage(_profileImageFile!),
+      );
     }
-    // Fallback
-    return const AssetImage('assets/image/default_avatar.png');
+
+    return const CircleAvatar(
+      radius: 55,
+      child: Icon(Icons.person, size: 55),
+    );
   }
 
   @override
@@ -207,10 +239,7 @@ class _ProfilePageState extends State<ProfilePage> {
             Stack(
               alignment: Alignment.bottomRight,
               children: [
-                CircleAvatar(
-                  radius: 55,
-                  backgroundImage: _avatarProvider(),
-                ),
+                _avatarWidget(), //
                 FloatingActionButton.small(
                   onPressed: _showPhotoOptions,
                   child: const Icon(Icons.edit),
@@ -239,7 +268,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ],
             ),
             Text(
-              "Personalize your profile by adding a photo and updating your display name.",
+              "Add a photo and update your username anytime.",
               style: TextStyle(color: Colors.grey.shade600),
             ),
           ],

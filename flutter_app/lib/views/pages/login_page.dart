@@ -1,161 +1,55 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_app/views/widget_tree.dart';
-import 'package:flutter_app/views/widgets/hero_widget.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({
-    super.key,
-    required this.isLogin, // true = login, false = register
-  });
+  const LoginPage({super.key, required this.isLogin});
 
-  final bool isLogin;
+  final bool isLogin; // true = login, false = register
 
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final TextEditingController controllerEmail = TextEditingController();
-  final TextEditingController controllerPw = TextEditingController();
-  bool _obscurePassword = true;
-  bool _isLoading = false;
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  final usernameController = TextEditingController();
 
-  // Error message
-  String? errorMessage;
+  bool isLoading = false;
+  bool obscure = true;
 
   @override
   void dispose() {
-    controllerEmail.dispose();
-    controllerPw.dispose();
+    emailController.dispose();
+    passwordController.dispose();
+    usernameController.dispose();
     super.dispose();
   }
 
-  // LOGIN function with Firebase
-  Future<void> login() async {
-    setState(() {
-      _isLoading = true;
-      errorMessage = null;
-    });
+  Future<void> submit() async {
+    setState(() => isLoading = true);
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: controllerEmail.text.trim(),
-        password: controllerPw.text.trim(),
-      );
+      if (widget.isLogin) {
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: emailController.text.trim(),
+          password: passwordController.text.trim(),
+        );
+      } else {
+        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: emailController.text.trim(),
+          password: passwordController.text.trim(),
+        );
+      }
 
       if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          duration: Duration(seconds: 2),
-          content: Text('Login successful!'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const WidgetTree()),
-      );
+      Navigator.pop(context); // go back to AuthGate / WidgetTree
     } on FirebaseAuthException catch (e) {
-      setState(() {
-        errorMessage = _getErrorMessage(e.code);
-      });
-
-      if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage!),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text(e.message ?? 'Auth error')),
       );
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  // REGISTER function with Firebase
-  Future<void> register() async {
-    setState(() {
-      _isLoading = true;
-      errorMessage = null;
-    });
-
-    try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: controllerEmail.text.trim(),
-        password: controllerPw.text.trim(),
-      );
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          duration: const Duration(seconds: 2),
-          content: Text('Registration successful for ${controllerEmail.text}!'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const WidgetTree()),
-      );
-    } on FirebaseAuthException catch (e) {
-      setState(() {
-        errorMessage = _getErrorMessage(e.code);
-      });
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage!),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  // Helper function to get user-friendly error messages
-  String _getErrorMessage(String code) {
-    switch (code) {
-      case 'user-not-found':
-        return 'No user found with this email.';
-      case 'wrong-password':
-        return 'Wrong password provided.';
-      case 'email-already-in-use':
-        return 'An account already exists with this email.';
-      case 'weak-password':
-        return 'Password is too weak. Use at least 6 characters.';
-      case 'invalid-email':
-        return 'Invalid email address.';
-      case 'user-disabled':
-        return 'This account has been disabled.';
-      case 'too-many-requests':
-        return 'Too many attempts. Please try again later.';
-      case 'operation-not-allowed':
-        return 'Email/password accounts are not enabled.';
-      case 'invalid-credential':
-        return 'Invalid email or password.';
-      default:
-        return 'An error occurred. Please try again.';
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
@@ -164,81 +58,99 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       appBar: AppBar(),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            HeroWidget(title: widget.isLogin ? 'Login' : 'Register'),
-            const SizedBox(height: 20.0),
+            const SizedBox(height: 20),
 
-            // Email field
-            TextField(
-              controller: controllerEmail,
-              keyboardType: TextInputType.emailAddress,
-              decoration: InputDecoration(
-                hintText: 'Email',
-                prefixIcon: const Icon(Icons.email),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15.0),
-                ),
+            Image.asset(
+              'assets/image/home.png',
+              height: 180,
+              fit: BoxFit.contain,
+            ),
+
+            const SizedBox(height: 20),
+
+            Text(
+              widget.isLogin ? 'Login' : 'Register',
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 10.0),
 
-            // Password field
+            const SizedBox(height: 30),
+
+            /// Username (only for register)
+            if (!widget.isLogin)
+              TextField(
+                controller: usernameController,
+                decoration: const InputDecoration(
+                  labelText: 'Username',
+                  prefixIcon: Icon(Icons.person),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+
+            if (!widget.isLogin) const SizedBox(height: 15),
+
+            /// Email
             TextField(
-              controller: controllerPw,
-              obscureText: _obscurePassword,
+              controller: emailController,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                prefixIcon: Icon(Icons.email),
+                border: OutlineInputBorder(),
+              ),
+            ),
+
+            const SizedBox(height: 15),
+
+            /// Password
+            TextField(
+              controller: passwordController,
+              obscureText: obscure,
               decoration: InputDecoration(
-                hintText: 'Password',
+                labelText: 'Password',
                 prefixIcon: const Icon(Icons.lock),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15.0),
-                ),
+                border: const OutlineInputBorder(),
                 suffixIcon: IconButton(
-                  icon: Icon(
-                    _obscurePassword ? Icons.visibility : Icons.visibility_off,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _obscurePassword = !_obscurePassword;
-                    });
-                  },
+                  icon: Icon(obscure ? Icons.visibility : Icons.visibility_off),
+                  onPressed: () => setState(() => obscure = !obscure),
                 ),
               ),
             ),
-            const SizedBox(height: 20.0),
 
-            // Login/Register button
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blueGrey,
-                minimumSize: const Size(double.infinity, 50.0),
+            const SizedBox(height: 30),
+
+            /// Button
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: isLoading ? null : submit,
+                child: isLoading
+                    ? const CircularProgressIndicator()
+                    : Text(widget.isLogin ? 'Login' : 'Register'),
               ),
-              onPressed: _isLoading
-                  ? null
-                  : () {
-                      if (widget.isLogin) {
-                        login();
-                      } else {
-                        register();
-                      }
-                    },
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : Text(
-                      widget.isLogin ? 'Login' : 'Register',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                      ),
-                    ),
+            ),
+
+            const SizedBox(height: 15),
+
+            TextButton(
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => LoginPage(isLogin: !widget.isLogin),
+                  ),
+                );
+              },
+              child: Text(
+                widget.isLogin
+                    ? "Don't have an account? Register"
+                    : "Already have an account? Login",
+              ),
             ),
           ],
         ),

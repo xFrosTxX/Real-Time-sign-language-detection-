@@ -2,10 +2,15 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/data/notifiers.dart';
 import 'package:flutter_app/views/auth_gate.dart';
+import 'firebase_options.dart'; //
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform, //
+  );
+
   runApp(const MyApp());
 }
 
@@ -25,7 +30,7 @@ class MyApp extends StatelessWidget {
               brightness: selectedDarkMode ? Brightness.dark : Brightness.light,
             ),
           ),
-          home: const AuthGate(), // ← Changed this
+          home: const AuthGate(),
         );
       },
     );
