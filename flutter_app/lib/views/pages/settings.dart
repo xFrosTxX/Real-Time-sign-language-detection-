@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/data/notifiers.dart';
 import 'package:flutter_app/views/pages/about_page.dart';
+import 'package:flutter_app/views/pages/login_page.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
   Future<void> _logout(BuildContext context) async {
-    // Reset navbar to Home
     selectedPageNotifier.value = 0;
 
-    // Go back to first screen (Welcome / Login)
-    Navigator.of(context).popUntil((route) => route.isFirst);
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => const LoginPage(isLogin: true),
+      ),
+      (route) => false,
+    );
   }
 
   @override
