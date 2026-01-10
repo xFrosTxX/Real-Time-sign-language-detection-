@@ -36,9 +36,14 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _loadProfile() async {
     final prefs = await SharedPreferences.getInstance();
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final user = FirebaseAuth.instance.currentUser;
+    final uid = user?.uid;
 
-    // ✅ Username from Firestore
+    final authName = user?.displayName;
+    if (authName != null && authName.trim().isNotEmpty) {
+      _displayName = authName.trim();
+    }
+
     if (uid != null) {
       try {
         final doc =
@@ -62,7 +67,6 @@ class _ProfilePageState extends State<ProfilePage> {
       }
     }
 
-    // ✅ Photo locally (FREE)
     if (uid != null) {
       if (kIsWeb) {
         final b64 = prefs.getString(_imgB64Key(uid));
@@ -86,19 +90,21 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _saveName(String name) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final user = FirebaseAuth.instance.currentUser;
+    final uid = user?.uid;
     if (uid == null) return;
 
     final newName = name.trim();
     if (newName.isEmpty) return;
 
-    // Save online
     await FirebaseFirestore.instance.collection("users").doc(uid).set(
       {"username": newName},
       SetOptions(merge: true),
     );
 
-    // Cache locally
+    await user?.updateDisplayName(newName);
+    await user?.reload();
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_nameKey(uid), newName);
   }
@@ -239,7 +245,7 @@ class _ProfilePageState extends State<ProfilePage> {
             Stack(
               alignment: Alignment.bottomRight,
               children: [
-                _avatarWidget(), //
+                _avatarWidget(),
                 FloatingActionButton.small(
                   onPressed: _showPhotoOptions,
                   child: const Icon(Icons.edit),

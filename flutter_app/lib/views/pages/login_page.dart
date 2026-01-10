@@ -1,5 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_app/views/auth_gate.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key, required this.isLogin});
@@ -31,22 +33,58 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       if (widget.isLogin) {
+        // ✅ LOGIN
         await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: emailController.text.trim(),
           password: passwordController.text.trim(),
         );
       } else {
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        // ✅ REGISTER
+        final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: emailController.text.trim(),
           password: passwordController.text.trim(),
         );
+
+        final uid = cred.user?.uid;
+        final name = usernameController.text.trim();
+
+        // ✅ Save username in FirebaseAuth profile (optional)
+        if (cred.user != null && name.isNotEmpty) {
+          await cred.user!.updateDisplayName(name);
+          await cred.user!.reload();
+        }
+
+        // ✅ Save username in Firestore (ProfilePage uses this)
+        if (uid != null && name.isNotEmpty) {
+          await FirebaseFirestore.instance.collection("users").doc(uid).set(
+            {
+              "username": name,
+              "email": emailController.text.trim(),
+              "createdAt": FieldValue.serverTimestamp(),
+            },
+            SetOptions(merge: true),
+          );
+        }
       }
 
       if (!mounted) return;
-      Navigator.pop(context); // go back to AuthGate / WidgetTree
+
+      // ✅ Clear all old pages and go to AuthGate
+      // AuthGate will show WidgetTree automatically when logged in
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const AuthGate()),
+        (route) => false,
+      );
     } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.message ?? 'Auth error')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
       );
     } finally {
       if (mounted) setState(() => isLoading = false);
@@ -81,7 +119,7 @@ class _LoginPageState extends State<LoginPage> {
 
             const SizedBox(height: 30),
 
-            /// Username (only for register)
+            // Username (only for register)
             if (!widget.isLogin)
               TextField(
                 controller: usernameController,
@@ -94,9 +132,10 @@ class _LoginPageState extends State<LoginPage> {
 
             if (!widget.isLogin) const SizedBox(height: 15),
 
-            /// Email
+            // Email
             TextField(
               controller: emailController,
+              keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(
                 labelText: 'Email',
                 prefixIcon: Icon(Icons.email),
@@ -106,7 +145,7 @@ class _LoginPageState extends State<LoginPage> {
 
             const SizedBox(height: 15),
 
-            /// Password
+            // Password
             TextField(
               controller: passwordController,
               obscureText: obscure,
@@ -123,14 +162,18 @@ class _LoginPageState extends State<LoginPage> {
 
             const SizedBox(height: 30),
 
-            /// Button
+            // Button
             SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
                 onPressed: isLoading ? null : submit,
                 child: isLoading
-                    ? const CircularProgressIndicator()
+                    ? const SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : Text(widget.isLogin ? 'Login' : 'Register'),
               ),
             ),

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/views/pages/login_page.dart';
 import 'package:flutter_app/views/pages/onboarding_page.dart';
-import 'package:flutter_app/views/widget_tree.dart';
-import 'package:flutter_app/views/widgets/hero_widget.dart';
 import 'package:lottie/lottie.dart';
 
 class WelcomePage extends StatelessWidget {

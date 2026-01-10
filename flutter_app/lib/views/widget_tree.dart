@@ -2,13 +2,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/data/notifiers.dart';
 import 'package:flutter_app/views/pages/home_page.dart';
+import 'package:flutter_app/views/pages/profile.dart';
 import 'package:flutter_app/views/pages/settings.dart';
 import 'package:flutter_app/views/pages/videos.dart';
-import 'package:flutter_app/views/pages/profile.dart';
-import 'package:flutter_app/views/pages/welcome_page.dart';
 import 'widgets/navbar_widget.dart';
 
-List<Widget> pages = [
+final List<Widget> pages = [
   const HomePage(),
   const VideoPage(),
   const ProfilePage(),
@@ -26,17 +25,14 @@ class WidgetTree extends StatelessWidget {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          duration: Duration(seconds: 5),
+          duration: Duration(seconds: 3),
           content: Text('Logged Out'),
           behavior: SnackBarBehavior.floating,
         ),
       );
 
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const WelcomePage()),
-        (route) => false,
-      );
+      // ✅ DO NOT navigate to WelcomePage here
+      // AuthGate will automatically show WelcomePage after signOut
     } catch (e) {
       if (!context.mounted) return;
 
@@ -60,12 +56,10 @@ class WidgetTree extends StatelessWidget {
             onPressed: () {
               selectedDarkModeNotifier.value = !selectedDarkModeNotifier.value;
             },
-            icon: ValueListenableBuilder(
+            icon: ValueListenableBuilder<bool>(
               valueListenable: selectedDarkModeNotifier,
-              builder: (context, selectedDarkModeNotifier, child) {
-                return Icon(
-                  selectedDarkModeNotifier ? Icons.dark_mode : Icons.light_mode,
-                );
+              builder: (context, isDark, child) {
+                return Icon(isDark ? Icons.dark_mode : Icons.light_mode);
               },
             ),
           ),
@@ -73,7 +67,7 @@ class WidgetTree extends StatelessWidget {
         centerTitle: true,
         backgroundColor: Colors.teal,
       ),
-      body: ValueListenableBuilder(
+      body: ValueListenableBuilder<int>(
         valueListenable: selectedPageNotifier,
         builder: (context, selectedPage, child) {
           return pages.elementAt(selectedPage);
@@ -83,7 +77,7 @@ class WidgetTree extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
-              DrawerHeader(
+              const DrawerHeader(
                 decoration: BoxDecoration(),
                 child: Text(
                   'Gesturewise',
@@ -94,7 +88,7 @@ class WidgetTree extends StatelessWidget {
                 ),
               ),
               ListTile(
-                title: Text('Logout'),
+                title: const Text('Logout'),
                 onTap: () {
                   Navigator.pop(context);
                   signOut(context);
@@ -106,7 +100,7 @@ class WidgetTree extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          print('button pressed');
+          debugPrint('button pressed');
         },
         child: const Icon(Icons.browse_gallery),
       ),
