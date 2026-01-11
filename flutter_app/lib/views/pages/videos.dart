@@ -1,6 +1,7 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/sign_lang_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class VideoPage extends StatefulWidget {
   const VideoPage({super.key});
@@ -13,6 +14,7 @@ class _VideoPageState extends State<VideoPage> {
   CameraController? _controller;
   List<CameraDescription>? _cameras;
   bool _isLoading = true;
+  String? _errorMessage;
   
   // Sign language recognition
   SignLanguageService? _signService;
@@ -23,13 +25,48 @@ class _VideoPageState extends State<VideoPage> {
   @override
   void initState() {
     super.initState();
-    _initCamera();
-    _initSignLanguageService();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    await _requestCameraPermission();
+    await _initSignLanguageService();
+  }
+
+  Future<void> _requestCameraPermission() async {
+    try {
+      final status = await Permission.camera.request();
+      
+      if (status.isGranted) {
+        await _initCamera();
+      } else if (status.isDenied) {
+        setState(() {
+          _errorMessage = 'Camera permission denied. Please enable it in settings.';
+          _isLoading = false;
+        });
+      } else if (status.isPermanentlyDenied) {
+        setState(() {
+          _errorMessage = 'Camera permission permanently denied. Please enable it in app settings.';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Permission error: $e';
+        _isLoading = false;
+      });
+      debugPrint("Permission error: $e");
+    }
   }
 
   Future<void> _initCamera() async {
     try {
       _cameras = await availableCameras();
+      
+      if (_cameras == null || _cameras!.isEmpty) {
+        throw Exception('No cameras found on this device');
+      }
+
       _controller = CameraController(
         _cameras!.first,
         ResolutionPreset.medium,
@@ -37,10 +74,23 @@ class _VideoPageState extends State<VideoPage> {
       );
 
       await _controller!.initialize();
+      
       if (!mounted) return;
-      setState(() => _isLoading = false);
+      
+      setState(() {
+        _isLoading = false;
+        _errorMessage = null;
+      });
+      
+      debugPrint('✓ Camera initialized successfully');
     } catch (e) {
       debugPrint("Camera error: $e");
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Camera initialization failed: $e';
+          _isLoading = false;
+        });
+      }
     }
   }
   
@@ -51,10 +101,32 @@ class _VideoPageState extends State<VideoPage> {
       debugPrint('✓ Sign language service ready');
     } catch (e) {
       debugPrint('✗ Sign service error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Sign language service error: $e'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
     }
   }
   
   void _toggleRecognition() {
+    if (_controller == null || !_controller!.value.isInitialized) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Camera not ready')),
+      );
+      return;
+    }
+
+    if (_signService == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign language service not ready')),
+      );
+      return;
+    }
+
     if (!_isRecognizing) {
       // Start
       setState(() => _isRecognizing = true);
@@ -94,110 +166,184 @@ class _VideoPageState extends State<VideoPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Sign Language Recognition')),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Sign Language Recognition'),
         backgroundColor: Colors.teal,
       ),
-      body: Stack(
-        children: [
-          // Camera
-          Center(
-            child: CameraPreview(_controller!),
-          ),
-          
-          // Recording indicator
-          if (_isRecognizing)
-            Positioned(
-              top: 20,
-              right: 20,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.red,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    const Text(
-                      'REC',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          
-          // Frame counter
-          if (_isRecognizing)
-            Positioned(
-              top: 20,
-              left: 20,
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'Frames: $_frameCount/64',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          
-          // Predictions
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [
-                    Colors.black.withOpacity(0.8),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-              child: _buildPredictionUI(),
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _toggleRecognition,
-        backgroundColor: _isRecognizing ? Colors.red : Colors.teal,
-        icon: Icon(_isRecognizing ? Icons.stop : Icons.play_arrow),
-        label: Text(_isRecognizing ? 'Stop' : 'Start Recognition'),
-      ),
+      body: _buildBody(),
+      floatingActionButton: _buildFloatingActionButton(),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
+  }
+
+  Widget _buildBody() {
+    // Loading state
+    if (_isLoading) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Initializing camera...'),
+          ],
+        ),
+      );
+    }
+
+    // Error state
+    if (_errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Colors.red.shade300,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _errorMessage!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  setState(() {
+                    _isLoading = true;
+                    _errorMessage = null;
+                  });
+                  await _requestCameraPermission();
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.teal,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextButton.icon(
+                onPressed: () => openAppSettings(),
+                icon: const Icon(Icons.settings),
+                label: const Text('Open Settings'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Camera not initialized
+    if (_controller == null || !_controller!.value.isInitialized) {
+      return const Center(
+        child: Text('Camera initialization failed'),
+      );
+    }
+
+    // Camera preview with overlay
+    return Stack(
+      children: [
+        // Camera
+        Center(
+          child: CameraPreview(_controller!),
+        ),
+        
+        // Recording indicator
+        if (_isRecognizing)
+          Positioned(
+            top: 20,
+            right: 20,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'REC',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        
+        // Frame counter
+        if (_isRecognizing)
+          Positioned(
+            top: 20,
+            left: 20,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'Frames: $_frameCount/64',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        
+        // Predictions
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+                colors: [
+                  Colors.black.withOpacity(0.8),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+            child: _buildPredictionUI(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget? _buildFloatingActionButton() {
+    if (_controller == null || !_controller!.value.isInitialized) {
+      return null;
+    }
+
+    return FloatingActionButton.extended(
+      onPressed: _toggleRecognition,
+      backgroundColor: _isRecognizing ? Colors.red : Colors.teal,
+      icon: Icon(_isRecognizing ? Icons.stop : Icons.play_arrow),
+      label: Text(_isRecognizing ? 'Stop' : 'Start Recognition'),
     );
   }
   

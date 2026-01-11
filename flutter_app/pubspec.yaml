@@ -26,7 +26,10 @@ dependencies:
 
   # Machine Learning
   tflite_flutter: ^0.10.4
-  
+
+  # Permissions
+  permission_handler: ^11.0.1
+
   # Profile picture
   image_picker: ^1.1.2
   shared_preferences: ^2.2.3
