@@ -21,6 +21,10 @@ class _VideoPageState extends State<VideoPage> {
   PredictionResult? _currentPrediction;
   bool _isRecognizing = false;
   int _frameCount = 0;
+  
+  // Debug info
+  bool _handsDetected = false;
+  bool _poseDetected = false;
 
   @override
   void initState() {
@@ -71,6 +75,7 @@ class _VideoPageState extends State<VideoPage> {
         _cameras!.first,
         ResolutionPreset.medium,
         enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.yuv420, // Explicitly set format
       );
 
       await _controller!.initialize();
@@ -138,10 +143,15 @@ class _VideoPageState extends State<VideoPage> {
           setState(() {
             _currentPrediction = result;
             _frameCount = 0;
+            _handsDetected = true;
+            _poseDetected = true;
           });
         } else if (mounted) {
           setState(() {
             _frameCount = _signService?.bufferedFrames ?? 0;
+            // Update detection status based on frame count
+            _handsDetected = _frameCount > 0;
+            _poseDetected = _frameCount > 0;
           });
         }
       });
@@ -153,6 +163,8 @@ class _VideoPageState extends State<VideoPage> {
         _isRecognizing = false;
         _currentPrediction = null;
         _frameCount = 0;
+        _handsDetected = false;
+        _poseDetected = false;
       });
     }
   }
@@ -300,13 +312,54 @@ class _VideoPageState extends State<VideoPage> {
                 color: Colors.black54,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(
-                'Frames: $_frameCount/64',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Frames: $_frameCount/64',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.pan_tool,
+                        size: 16,
+                        color: _handsDetected ? Colors.green : Colors.red,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Hands: ${_handsDetected ? "✓" : "✗"}',
+                        style: TextStyle(
+                          color: _handsDetected ? Colors.green : Colors.red,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.accessibility_new,
+                        size: 16,
+                        color: _poseDetected ? Colors.green : Colors.red,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Pose: ${_poseDetected ? "✓" : "✗"}',
+                        style: TextStyle(
+                          color: _poseDetected ? Colors.green : Colors.red,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),

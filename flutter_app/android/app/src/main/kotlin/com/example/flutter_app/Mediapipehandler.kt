@@ -44,7 +44,7 @@ class MediaPipeHandler(private val context: Context) {
             val poseOptions = PoseLandmarker.PoseLandmarkerOptions.builder()
                 .setBaseOptions(
                     BaseOptions.builder()
-                        .setModelAssetPath("pose_landmarker_heavy.task") 
+                        .setModelAssetPath("pose_landmarker_heavy.task") // Your model file name
                         .build()
                 )
                 .setRunningMode(RunningMode.IMAGE)
@@ -55,46 +55,69 @@ class MediaPipeHandler(private val context: Context) {
             
             poseLandmarker = PoseLandmarker.createFromOptions(context, poseOptions)
             
-            println("MediaPipe initialized successfully")
+            println("✓ MediaPipe initialized successfully")
         } catch (e: Exception) {
-            println("MediaPipe initialization error: ${e.message}")
+            println("✗ MediaPipe initialization error: ${e.message}")
             e.printStackTrace()
         }
     }
     
     fun processFrame(bytes: ByteArray, width: Int, height: Int): Map<String, Any?>? {
         try {
+            println("📸 Processing frame: ${width}x${height}")
+            
             // Convert camera bytes to Bitmap
-            val bitmap = bytesToBitmap(bytes, width, height) ?: return null
+            val bitmap = bytesToBitmap(bytes, width, height)
+            if (bitmap == null) {
+                println("✗ Failed to create bitmap")
+                return null
+            }
             
             // Create MediaPipe Image
             val mpImage = BitmapImageBuilder(bitmap).build()
             
             // Detect hands
             val handResult = handLandmarker?.detect(mpImage)
+            println("Hand detection result: ${handResult?.landmarks()?.size ?: 0} hands detected")
             
             // Detect pose
             val poseResult = poseLandmarker?.detect(mpImage)
+            println("Pose detection result: ${poseResult?.landmarks()?.size ?: 0} poses detected")
             
             // Parse results
-            return parseResults(handResult, poseResult)
+            val result = parseResults(handResult, poseResult)
+            println("✓ Parsed result: left_hand=${result["left_hand"] != null}, right_hand=${result["right_hand"] != null}, pose=${result["pose"] != null}")
+            
+            return result
             
         } catch (e: Exception) {
-            println("Frame processing error: ${e.message}")
+            println("✗ Frame processing error: ${e.message}")
+            e.printStackTrace()
             return null
         }
     }
     
     private fun bytesToBitmap(bytes: ByteArray, width: Int, height: Int): Bitmap? {
         return try {
-            // Assuming NV21 format (standard Android camera format)
+            println("Converting image: ${width}x${height}, bytes: ${bytes.size}")
+            
+            // Try NV21 format first (standard Android camera format)
             val yuvImage = YuvImage(bytes, ImageFormat.NV21, width, height, null)
             val out = ByteArrayOutputStream()
             yuvImage.compressToJpeg(Rect(0, 0, width, height), 100, out)
             val imageBytes = out.toByteArray()
-            BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+            val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+            
+            if (bitmap != null) {
+                println("✓ Bitmap created: ${bitmap.width}x${bitmap.height}")
+            } else {
+                println("✗ Bitmap is null after decoding")
+            }
+            
+            bitmap
         } catch (e: Exception) {
-            println("Bitmap conversion error: ${e.message}")
+            println("✗ Bitmap conversion error: ${e.message}")
+            e.printStackTrace()
             null
         }
     }
