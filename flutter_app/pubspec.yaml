@@ -1,6 +1,6 @@
 name: flutter_app
 description: GestureWise - Real-time sign language detection app
-publish_to: 'none'
+publish_to: "none"
 
 version: 1.0.0+1
 
@@ -25,7 +25,7 @@ dependencies:
   camera: ^0.10.5+9
 
   # Machine Learning
-  tflite_flutter: ^0.10.4
+  tflite_flutter: ^0.11.0
 
   # Permissions
   permission_handler: ^11.0.1
