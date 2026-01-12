@@ -28,6 +28,9 @@ dependencies:
   image_picker: ^1.1.2
   shared_preferences: ^2.2.3
 
+  # HTTP for API calls
+  http: ^1.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
