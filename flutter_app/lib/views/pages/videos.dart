@@ -433,6 +433,63 @@ class _VideoPageState extends State<VideoPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Warning banners
+          if (_currentPrediction!.hatBiasFilterApplied)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade700,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.shade900, width: 2),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.filter_alt, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Hat bias filter applied - showing alternative prediction',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          
+          if (_currentPrediction!.lowConfidenceWarning && !_currentPrediction!.hatBiasFilterApplied)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade600,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.amber.shade800, width: 2),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_amber, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Low confidence - try holding the sign steady',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          
           // Top prediction
           Container(
             width: double.infinity,

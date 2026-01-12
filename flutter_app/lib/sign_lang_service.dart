@@ -201,11 +201,17 @@ class SignLanguageService {
     
     input[0] = sampled;
     
+    // VALIDATION LOGGING: Check input statistics
+    _logInputValidation(input[0]);
+    
     // Prepare output [1, 250]
     var output = List.generate(1, (_) => List.filled(250, 0.0));
     
     // Run model
     _interpreter!.run(input, output);
+    
+    // VALIDATION LOGGING: Check output statistics
+    _logOutputValidation(output[0]);
     
     // Get top 5
     List<MapEntry<int, double>> indexed = [];
@@ -218,7 +224,165 @@ class SignLanguageService {
       Prediction(_indexToSign![e.key]!, e.value)
     ).toList();
     
-    return PredictionResult(top5);
+    // HAT BIAS FILTER: Apply filtering to handle model bias
+    final filteredResult = _applyHatBiasFilter(top5, output[0]);
+    
+    return filteredResult;
+  }
+  
+  /// Validates and logs input tensor statistics for debugging
+  void _logInputValidation(List<List<double>> inputFrames) {
+    // Calculate statistics across all frames
+    int totalFeatures = 0;
+    int nonZeroFeatures = 0;
+    double sumValues = 0.0;
+    double minVal = double.infinity;
+    double maxVal = double.negativeInfinity;
+    
+    for (var frame in inputFrames) {
+      for (var value in frame) {
+        totalFeatures++;
+        if (value != 0.0) {
+          nonZeroFeatures++;
+          sumValues += value;
+          if (value < minVal) minVal = value;
+          if (value > maxVal) maxVal = value;
+        }
+      }
+    }
+    
+    double meanVal = nonZeroFeatures > 0 ? sumValues / nonZeroFeatures : 0.0;
+    double nonZeroPercent = (nonZeroFeatures / totalFeatures) * 100;
+    
+    print('═══════════════════════════════════════════════════');
+    print('📊 INPUT VALIDATION');
+    print('═══════════════════════════════════════════════════');
+    print('  Shape: [${inputFrames.length}, ${inputFrames[0].length}]');
+    print('  Non-zero features: $nonZeroFeatures / $totalFeatures (${nonZeroPercent.toStringAsFixed(1)}%)');
+    print('  Value range: [${minVal.toStringAsFixed(4)}, ${maxVal.toStringAsFixed(4)}]');
+    print('  Mean (non-zero): ${meanVal.toStringAsFixed(4)}');
+    
+    // Warning if input looks suspicious
+    if (nonZeroPercent < 10) {
+      print('  ⚠️  WARNING: Very few non-zero features detected!');
+      print('  This may indicate landmark detection issues.');
+    }
+  }
+  
+  /// Validates and logs output tensor statistics for debugging
+  void _logOutputValidation(List<double> outputProbabilities) {
+    // Find top predictions
+    List<MapEntry<int, double>> indexed = [];
+    for (int i = 0; i < outputProbabilities.length; i++) {
+      indexed.add(MapEntry(i, outputProbabilities[i]));
+    }
+    indexed.sort((a, b) => b.value.compareTo(a.value));
+    
+    var top5 = indexed.take(5).toList();
+    
+    // Calculate statistics
+    double sum = outputProbabilities.reduce((a, b) => a + b);
+    double maxProb = top5[0].value;
+    double secondMaxProb = top5.length > 1 ? top5[1].value : 0.0;
+    double confidence = maxProb - secondMaxProb; // Separation between top 2
+    
+    print('═══════════════════════════════════════════════════');
+    print('🎯 OUTPUT VALIDATION');
+    print('═══════════════════════════════════════════════════');
+    print('  Output shape: [${outputProbabilities.length}]');
+    print('  Sum of probabilities: ${sum.toStringAsFixed(4)}');
+    print('  Max probability: ${(maxProb * 100).toStringAsFixed(2)}%');
+    print('  Confidence margin: ${(confidence * 100).toStringAsFixed(2)}%');
+    print('');
+    print('  Top 5 predictions:');
+    for (int i = 0; i < top5.length; i++) {
+      final sign = _indexToSign![top5[i].key] ?? 'Unknown';
+      final prob = top5[i].value * 100;
+      print('    ${i + 1}. $sign: ${prob.toStringAsFixed(2)}%');
+    }
+    
+    // Warnings
+    if (maxProb < 0.1) {
+      print('  ⚠️  WARNING: Very low confidence prediction!');
+    }
+    if (confidence < 0.05) {
+      print('  ⚠️  WARNING: Top predictions are very close!');
+    }
+    print('═══════════════════════════════════════════════════');
+  }
+  
+  /// Applies "hat" bias filter to prevent false "hat" predictions
+  /// The model has a known bias to predict "hat" with low-quality input
+  PredictionResult _applyHatBiasFilter(List<Prediction> predictions, List<double> rawOutput) {
+    const double HAT_CONFIDENCE_THRESHOLD = 0.30; // 30% threshold for "hat"
+    const double MIN_CONFIDENCE_THRESHOLD = 0.15; // 15% minimum for any prediction
+    
+    bool hatFilterApplied = false;
+    bool lowConfidence = false;
+    
+    // Check if top prediction is "hat" with suspicious confidence
+    if (predictions.isNotEmpty && 
+        predictions[0].sign.toLowerCase() == 'hat' && 
+        predictions[0].confidence < HAT_CONFIDENCE_THRESHOLD) {
+      
+      print('🚫 HAT BIAS FILTER TRIGGERED');
+      print('   "hat" predicted with ${(predictions[0].confidence * 100).toStringAsFixed(1)}% confidence');
+      print('   Threshold: ${(HAT_CONFIDENCE_THRESHOLD * 100).toStringAsFixed(0)}%');
+      
+      hatFilterApplied = true;
+      
+      // Find next best prediction that isn't "hat"
+      var alternativePredictions = predictions
+          .where((p) => p.sign.toLowerCase() != 'hat')
+          .toList();
+      
+      if (alternativePredictions.isNotEmpty && 
+          alternativePredictions[0].confidence >= MIN_CONFIDENCE_THRESHOLD) {
+        print('   ✓ Using alternative: ${alternativePredictions[0].sign} (${(alternativePredictions[0].confidence * 100).toStringAsFixed(1)}%)');
+        
+        // Reorder predictions with "hat" removed from top
+        var filtered = [alternativePredictions[0]];
+        filtered.addAll(predictions.where((p) => 
+            p.sign != alternativePredictions[0].sign && 
+            p.sign.toLowerCase() != 'hat'
+        ).take(4));
+        
+        return PredictionResult(
+          filtered,
+          hatBiasFilterApplied: true,
+          lowConfidenceWarning: alternativePredictions[0].confidence < 0.25,
+        );
+      } else {
+        print('   ⚠️  No confident alternative found, keeping "hat" but flagged');
+        lowConfidence = true;
+      }
+    }
+    
+    // Also filter out any prediction below minimum threshold
+    var confidentPredictions = predictions
+        .where((p) => p.confidence >= MIN_CONFIDENCE_THRESHOLD)
+        .toList();
+    
+    if (confidentPredictions.isEmpty) {
+      print('⚠️  All predictions below ${(MIN_CONFIDENCE_THRESHOLD * 100).toStringAsFixed(0)}% threshold');
+      lowConfidence = true;
+      // Return original but user should be warned
+      return PredictionResult(
+        predictions,
+        hatBiasFilterApplied: hatFilterApplied,
+        lowConfidenceWarning: true,
+      );
+    }
+    
+    final resultPredictions = confidentPredictions.length >= 5 
+        ? confidentPredictions.take(5).toList() 
+        : confidentPredictions;
+    
+    return PredictionResult(
+      resultPredictions,
+      hatBiasFilterApplied: hatFilterApplied,
+      lowConfidenceWarning: lowConfidence || (resultPredictions.isNotEmpty && resultPredictions[0].confidence < 0.25),
+    );
   }
   
   Uint8List _concatenatePlanes(List<Plane> planes) {
@@ -242,7 +406,14 @@ class Prediction {
 
 class PredictionResult {
   final List<Prediction> predictions;
-  PredictionResult(this.predictions);
+  final bool hatBiasFilterApplied;
+  final bool lowConfidenceWarning;
+  
+  PredictionResult(
+    this.predictions, {
+    this.hatBiasFilterApplied = false,
+    this.lowConfidenceWarning = false,
+  });
   
   String get topSign => predictions.first.sign;
   double get topConfidence => predictions.first.confidence;
