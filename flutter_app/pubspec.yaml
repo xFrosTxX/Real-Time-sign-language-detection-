@@ -24,6 +24,12 @@ dependencies:
   # Camera
   camera: ^0.10.5+9
 
+  # Machine Learning
+  tflite_flutter: ^0.10.4
+
+  # Permissions
+  permission_handler: ^11.0.1
+
   # Profile picture
   image_picker: ^1.1.2
   shared_preferences: ^2.2.3
@@ -39,3 +45,5 @@ flutter:
   assets:
     - assets/image/
     - assets/lotties/
+    - assets/sign_language_model.tflite
+    - assets/sign_to_prediction_index_map.json
