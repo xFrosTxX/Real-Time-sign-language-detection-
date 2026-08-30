@@ -119,9 +119,11 @@ assets/
 7. Profile updates (username → Firestore, picture → local storage) are handled separately
 
 ## App Images
-<img width="267" height="453" alt="image" src="https://github.com/user-attachments/assets/27d24345-4f9e-4d84-a232-2846ddd65480" />
-<img width="269" height="583" alt="image" src="https://github.com/user-attachments/assets/23872eb4-dd3d-4a4c-a694-69ea0e4e6cf1" />
 
+<p align="center">
+  <img width="267" height="453" alt="Login screen" src="https://github.com/user-attachments/assets/27d24345-4f9e-4d84-a232-2846ddd65480" />
+  <img width="269" height="583" alt="Home screen" src="https://github.com/user-attachments/assets/23872eb4-dd3d-4a4c-a694-69ea0e4e6cf1" />
+</p>
 
 ## Limitations
 
