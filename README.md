@@ -120,10 +120,18 @@ assets/
 
 ## App Images
 
-<p align="center">
-  <img width="267" height="453" alt="Login screen" src="https://github.com/user-attachments/assets/27d24345-4f9e-4d84-a232-2846ddd65480" />
-  <img width="269" height="583" alt="Home screen" src="https://github.com/user-attachments/assets/23872eb4-dd3d-4a4c-a694-69ea0e4e6cf1" />
-</p>
+<table align="center">
+  <tr>
+    <td align="center">
+      <img width="267" src="https://github.com/user-attachments/assets/27d24345-4f9e-4d84-a232-2846ddd65480" /><br/>
+      <sub>Login</sub>
+    </td>
+    <td align="center">
+      <img width="269" src="https://github.com/user-attachments/assets/23872eb4-dd3d-4a4c-a694-69ea0e4e6cf1" /><br/>
+      <sub>Home</sub>
+    </td>
+  </tr>
+</table>
 
 ## Limitations
 
